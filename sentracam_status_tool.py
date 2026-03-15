@@ -408,7 +408,7 @@ def low_battery_rd_fisheye_tool():
             row["name"] = "SC-" + row["name"]
             print(f'Adjusted {row["name"]}')
         battery = row["battery"]
-        print(f"{row["name"]} - {battery}")
+        print(f"{row['name']} - {battery}")
         erp_token = os.getenv("erp_token")
         url = "https://erp.sentracam.com/api/resource/Component"
         headers = {
@@ -434,28 +434,28 @@ def low_battery_rd_fisheye_tool():
             rd_down.append(full_unit)
     print('RD List:')
     for rd in rd_down:
-        print(f"{rd["name"]} - {rd["trailer"]}")
+        print(f"{rd['name']} - {rd['trailer']}")
 
 def low_battery_list():
     print("Low battery units: ")
     for row in low_battery_units:
         name = row["name"]
         battery = row["battery"]
-        print(f"{row["name"]} - {row["battery"]}")
+        print(f"{row['name']} - {row['battery']}")
     
 def depleted_battery_list():
     print("Depleted battery units: ")
     for row in depleted_battery_units:
         name = row["name"]
         battery = row["battery"]
-        print(f"{row["name"]} - {row["battery"]}")
+        print(f"{row['name']} - {row['battery']}")
     
 def all_battery_list():
     print("All battery units: ")
     for row in all_battery_units:
         name = row["name"]
         battery = row["battery"]
-        print(f"{row["name"]} - {row["battery"]}")
+        print(f"{row['name']} - {row['battery']}")
 
 if __name__ == "__main__":
     main()
