@@ -87,6 +87,7 @@ def main():
         print("10. Search C:\\Temp directory for fisheye snapshots of a specific unit for solar panel analysis")
         print("11. Update unit battery health list")
         print("12. Screenshot fisheye on low battery units")
+    
         
         cmd = input("Enter a number 1-12: ")
         if cmd == "1":
@@ -141,6 +142,16 @@ def main():
 def clear_terminal():
     os.system('cls')
 
+def clear_old_reports():
+    mesh_outage = os.path.join(os.path.expanduser('~'), "Downloads", "filtered_mesh_vpn.csv")
+    issue = os.path.join(os.path.expanduser('~'), "Downloads", "Issue.csv")
+    
+    try:
+        os.remove(mesh_outage)
+        os.remove(issue)
+    except Exception as e:
+        print(f'Failed to remove: {e}')
+
 def file_search(unit, root=r'C:\Temp'):
     results = []
 
@@ -156,7 +167,6 @@ def file_search(unit, root=r'C:\Temp'):
     return results
 
 def compare_reports():
-    print('Usage: Download both the mesh outage sheet and issue sheet. Name one "mesh.csv", and the other "issue.csv".')
     mesh_outage = os.path.join(os.path.expanduser("~"), "Downloads", "filtered_mesh_vpn.csv")
     erp_export = os.path.join(os.path.expanduser("~"), "Downloads", "Issue.csv")
 
@@ -191,6 +201,8 @@ def compare_reports():
     for row in missing:
         if row != 'Agent Name':
             print(row)
+    print('Deleting old reports')
+    clear_old_reports()
 
 
 def generate_net_array():
