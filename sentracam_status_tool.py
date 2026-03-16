@@ -16,6 +16,10 @@ def resource_path(relative_path):
 
 BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname
+
+
 username = os.getenv("username")
 idUser = os.getenv("idUser")
 counter = 0
@@ -81,8 +85,10 @@ def main():
         print("8. Update unit map sheet")
         print("9. Print unit map sheet")
         print("10. Search C:\\Temp directory for fisheye snapshots of a specific unit for solar panel analysis")
+        print("11. Update unit battery health list")
+        print("12. Screenshot fisheye on low battery units")
         
-        cmd = input("Enter a number 1-10: ")
+        cmd = input("Enter a number 1-12: ")
         if cmd == "1":
             install_checker()
         elif cmd == "2":
@@ -116,7 +122,14 @@ def main():
         elif cmd == "10":
             unit = input('Enter unit to search for in C:\\Temp: ')
             matches = file_search(unit)
-        
+        elif cmd == "11":
+            print("Scanning unit battery health and updating lists...")
+            all_unit_battery_health()
+        elif cmd == "12":
+            print('Screenshotting fisheye on low battery units and saving to C:\Temp...')
+            low_battery_rd_fisheye_tool()
+            low_battery_fisheye_screenshotter()
+
         elif cmd == "cls" or cmd == "clr" or cmd == "clear":
             clear_terminal()
         elif cmd == "quit" or cmd == "exit":
@@ -297,8 +310,10 @@ def all_unit_battery_health():
                 "idSite": f"{siteid}",
                 "X-Authorization": f"Token {api_token}"
                 }
-
-            response2 = requests.get(f"https://vrmapi.victronenergy.com/v2/installations/{siteid}/diagnostics", headers=headers2)
+            try:
+                response2 = requests.get(f"https://vrmapi.victronenergy.com/v2/installations/{siteid}/diagnostics", headers=headers2)
+            except Exception as e:
+                print(f"Failed as {e}")
             data2 = response2.json()
             records = data2.get("records", {})
             
