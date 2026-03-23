@@ -2,6 +2,7 @@ import requests
 import csv
 import os
 import sys
+import subprocess
 from requests.auth import HTTPDigestAuth
 from datetime import datetime
 from dotenv import load_dotenv
@@ -16,10 +17,6 @@ def resource_path(relative_path):
 
 BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
-if getattr(sys, "frozen", False):
-    BASE_DIR = os.path.dirname
-
-
 username = os.getenv("username")
 idUser = os.getenv("idUser")
 counter = 0
@@ -32,7 +29,8 @@ depleted_battery_units = []
 net_array = []
 rd_down = []
 fisheyes = []
-
+missing = []
+false_positive = []
 netsheet = resource_path("net_sheet.csv")
 mapsheet = os.path.join(BASE_DIR, "map_sheet.csv")
 
@@ -151,6 +149,8 @@ def clear_old_reports():
         os.remove(issue)
     except Exception as e:
         print(f'Failed to remove: {e}')
+    print('Beginning outage validation')
+    validate_reports()
 
 def file_search(unit, root=r'C:\Temp'):
     results = []
@@ -166,13 +166,66 @@ def file_search(unit, root=r'C:\Temp'):
             print(f'{file}')
     return results
 
+def validate_reports():
+    counter = 0
+    print('Checking connectivity on missing units...')
+    with open(netsheet, "r") as csvfile:
+        reader = csv.reader(csvfile)
+        for unit in missing:
+            for row in net_array:
+                if unit == row[0] and unit[:2] != "MU":
+                    print('matched' + unit)
+                    result = subprocess.run(["ping", "-n", "4", row[1]], capture_output=True, text=True)
+                    print(result.stdout)
+                    lines = result.stdout.splitlines()
+                    for line in lines:
+                        #print(line)
+                        if "Average" in line:
+                            print("Router is up, checking nuc..")
+                            result = subprocess.run(["ping", "-n", "4", row[3]], capture_output=True, text=True)
+                            print(result.stdout)
+                            lines = result.stdout.splitlines()
+                            for line in lines:
+                                if "Average" in line:
+                                    print(f"Both NUC and Router are online, removing {unit} from missing array")
+                                    false_positive.append(unit)
+                                elif "Request" in line or "unreachable" in line or "transit" in line:
+                                    counter += 1
+                                    if counter >= 3:
+                                        print("NUC is down, router is up. Bounce NUC.")
+                                        counter = 0
+                                        break
+
+                        elif "Request" in line or "unreachable" in line or "transit" in line:
+                            counter += 1
+                            if counter >= 3:
+                                print('Router is down, resetting counter, checking NUC')
+                                counter = 0
+                                result = subprocess.run(["ping", "-n", "4", row[3]], capture_output=True, text=True)
+                                print(result.stdout)
+                                lines = result.stdout.splitlines()
+                                for line in lines:
+                                    if "Average" in line:
+                                        print(f"NUC is up, router is down, reset VPN connection on {unit}")
+                                    elif "Request" in line or "unreachable" in line or "transit" in line:
+                                        counter += 1
+                                        if counter >= 3:
+                                            print("NUC and router are offline.")
+                                            counter = 0
+                                            break
+    print("New adjusted missing list:")
+    for line in missing:
+        if line not in false_positive and line != "Agent Name":
+            print(line)
+        
+
 def compare_reports():
     mesh_outage = os.path.join(os.path.expanduser("~"), "Downloads", "filtered_mesh_vpn.csv")
     erp_export = os.path.join(os.path.expanduser("~"), "Downloads", "Issue.csv")
 
     mesh_array = []
     erp_array = []
-    missing = []
+    #missing = []
 
     with open(mesh_outage, 'r', newline='') as csvfile:
         linereader = csv.reader(csvfile)
@@ -203,7 +256,7 @@ def compare_reports():
             print(row)
     print('Deleting old reports')
     clear_old_reports()
-
+    validate_reports()
 
 def generate_net_array():
     with open(netsheet, "r", newline='') as csvfile:
